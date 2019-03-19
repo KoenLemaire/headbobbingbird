@@ -5,69 +5,73 @@ clear
 clc
 close all
 
-% independent parameters
+%% independent parameters
 parms.g=-9.81; % [m/s^2] gravitational acceleration
-pigeon_mass=1; % [kg] pigeon mass 
+pigeon_mass=1; % [kg] total pigeon mass 
 head_mass_rel=.2; % [] proportion of head mass relative to total pigeon mass
-hh_rel=1.05;
+hh_rel=1.05; % head height relative to leg length
+bobtime_rel=.25; % [] relative time duration of headmotion  
 parms.L=1; % [m] leg length
 parms.alpha=.3; % [rad] half leg spread angle
-parms.speed=2; % [m/s] desired walking speed
+parms.speed=2*parms.L; % [m/s] desired walking speed
 
-% derived parameters
+%% derived parameters
 parms.mp=(1-head_mass_rel)*pigeon_mass; % [kg] pigeon pelvis mass   
 parms.mh=head_mass_rel*pigeon_mass; % [kg] pigeon head mass
 parms.hh=hh_rel*parms.L; % [m] head height 
 parms.step_length=2*parms.L*sin(parms.alpha); % [m] step length
 parms.step_time=parms.step_length/parms.speed; % [s] desired step duration
+parms.bobtime=parms.step_time*bobtime_rel;
 
-% initial condition (maybe make this a parameter input?? to distinguish
+%% (potentially) free parameters
 % from initial guess in an optimation scheme ...??)
-x0 = [.5*pi+parms.alpha; -1; 1*parms.L; .1; 0.6]; % [phi phid xh xhd] a sample initial state
-[t,state,Ekin,Wtot] = bird_step(x0, parms);
+Phat_push=0.5;
+delay=0.1;
+phid0=-5;
+xh0=.1*parms.L;
+x0 = [xh0; phid0; delay; Phat_push]; % initial guess for design parms
+
+%% perform simulation:
+[t,state,phi_minus,phi_plus,phid_minus,phid_plus,Ekin_stance,Wgravity,Wneck,Wcoll,Wpush,Ekin_plus] = bird_headbob(x0, parms);
 
 phi=state(:,1);
 phid=state(:,2);
 xh=state(:,3);
 yh=parms.hh;
 
-%% State plot; not really a test, but demonstration plot
+%% State plots; not really a test, but demonstration plot
 figure;
 plot(t,state(:,1:2))
+xlabel('Time [s]');
+ylabel('leg angles [rad, rad/s]');
+title('states vs time of stance phase for headbobbing bird');
+legend('phi','phidot')
 
+figure;
+plot(state(:,1),state(:,2))
+xlabel('phi [rad]');
+ylabel('phidot [rad/s]');
+title('phase diagram of stance phase');
+legend('phi','phidot')
+%% animation
 figure;
 for iStep=1:length(t)
     r_p=parms.L*[cos(phi(iStep)) sin(phi(iStep))];
-    plot([0 r_p(1)],[0 r_p(2)],'k',xh(iStep),yh,'ro',[r_p(1) xh(iStep)],[r_p(2) yh],'b--'); hold on
+    plot([0 r_p(1)],[0 r_p(2)],'k'); hold on
+    plot(xh(iStep),yh,'ro','linewidth',2); hold on
+    plot(r_p(1),r_p(2),'ko','linewidth',2,'markersize',8); hold on
+    plot([r_p(1) xh(iStep)],[r_p(2) yh],'b--'); hold on
+    xlabel('x axis [m]')
+    ylabel('y axis [m]')
+    legend('leg','head','pelvis','neck')
+    title('stick diagram of stance leg and head')
+    axis([-1 1 0 1.5]*parms.L)
     drawnow
     axis equal
 end
-% xlabel('time (dimensionless)');
-% ylabel('states (dimensionless)');
-% title('states vs. time for rimless wheel');
-% legend('theta', 'thetadot');
-
 %% Energy plot
 figure
-plot(t,Ekin-Wtot)
-% xlabel('time (dimensionless)');
-% ylabel('energy (dimensionless)');
-% title('energies vs. time for rimless wheel');
-% 
-% subplot(122)
-% plot(ts,energies) % zoom in on energy for the last step
-% xlabel('time (dimensionless)');
-% ylabel('energy (dimensionless)');
-% title('energies vs. time for final step of rimless wheel');
-
-%% Thetadot per step 
-% figure
-% plot(0:length(x0s)-1, x0s(:,2),'.')
-% xlabel('step number');
-% ylabel('initial thetadot (dimensionless)');
-% title('initial thetadot vs. step number');
-% hold on
-% plot([0,length(x0s)-1], thetadotplusstar*[1 1],':')
-% legend('thetadot', 'analytical limit cycle')
-
-
+plot(t,Ekin_stance-Wgravity-Wneck)
+xlabel('Time [s]');
+ylabel('delta Ekin - Wtot [J]');
+title('Energy balance of stance phase for headbobbing bird'); 
