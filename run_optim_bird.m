@@ -7,13 +7,15 @@ parms.g=-9.81; % [m/s^2] gravitational acceleration
 pigeon_mass=1; % [kg] total pigeon mass 
 head_mass_rel=.1; % [] proportion of head mass relative to total pigeon mass
 hh_rel=1.05; % head height relative to leg length
-bobtime_rel=.20; % [] relative time duration of headmotion  
+bobtime_rel=.25; % [] relative time duration of headmotion  
 parms.L=1; % [m] leg length
 parms.alpha=.3; % [rad] half leg spread angle
-parms.xh0=0.1*parms.L;
+parms.xh0=0.2*parms.L;
 
 %% (potential) sweeping parameters:
-delay_rel=.2;
+delayVec=linspace(0.1,0.6,10);
+for iDelay=1:10
+delay_rel=delayVec(iDelay);
 parms.speed=2*parms.L; % [m/s] desired walking speed
 
 %% derived parameters
@@ -46,11 +48,12 @@ fmincon_opt.Display='iter';
 
 optimFun=@(x)headbob_cost(x,parms); % DOESNT WORK WITH LSQNONLIN!!!
 nonlinconFun=@(x)headbob_nonlincon(x,parms);
-[x,fval,flag] = fmincon(optimFun,x0,[],[],[],[],[],[],nonlinconFun,fmincon_opt)
+[x,fval(iDelay),flag] = fmincon(optimFun,x0,[],[],[],[],[],[],nonlinconFun,fmincon_opt);
 
-[C,Ceq] = headbob_nonlincon (x,parms)
+[C,Ceq] = headbob_nonlincon (x,parms);
 %[J] = headbob_cost (x,parms)
 [Wcoll,c_coll,state_end,t,state,Ekin_stance,Wgravity,Wneck,Wpush] = bird_headbob_optim(x, parms);
+end
 end
 %% State plots; not really a test, but demonstration plot
 phi=state(:,1);
