@@ -14,7 +14,7 @@ parms.xh0=0.2*parms.L;
 
 %% (potential) sweeping parameters:
 delayVec=linspace(0.1,0.6,10);
-for iDelay=1:10
+for iDelay=4
 delay_rel=delayVec(iDelay);
 parms.speed=2*parms.L; % [m/s] desired walking speed
 
@@ -27,9 +27,9 @@ parms.step_time=parms.step_length/parms.speed; % [s] desired step duration
 parms.bobtime=parms.step_time*bobtime_rel; % [s]
 parms.delay=delay_rel*parms.step_time; % [s]
 %% free parameters
-% potentially add simulation time ?? 
-Phat_push=0; % [Ns] push off magnitude
-phid0=0; % [rad/s] phidot of stance leg AT END OF PREVIOUS STANCE PHASE
+% potentially add simulation time ??
+phid0=-2.5; % [rad/s] phidot of stance leg AT END OF PREVIOUS STANCE PHASE
+Phat_push=0.5; % [Ns] push off magnitude
 step_time=parms.step_length/parms.speed;
 %x0 = [phid0; Phat_push; step_time]; % initial guess for design parms
 x0 = [phid0; Phat_push]; % initial guess for design parms
@@ -62,25 +62,38 @@ xh=state(:,3);
 yh=parms.hh;
 
 figure;
-plot(t,state(:,1:2))
+subplot(121);plot(t,state(:,1:2))
 xlabel('Time [s]');
 ylabel('leg angles [rad, rad/s]');
-title('states vs time of stance phase for headbobbing bird');
+title('states of leg vs time of stance phase for headbobbing bird');
 legend('phi','phidot')
+subplot(122);plot(t,state(:,3:4))
+xlabel('Time [s]');
+ylabel('headbob x coordinate [m, m/s]');
+title('states of head vs time of stance phase for headbobbing bird');
+legend('xh','xhdot')
 
 figure;
-plot(state(:,1),state(:,2))
+subplot(121);plot(state(:,1),state(:,2))
 xlabel('phi [rad]');
 ylabel('phidot [rad/s]');
-title('phase diagram of stance phase');
-legend('phi','phidot')
+title('phase diagram of leg during stance phase');
+subplot(122);plot(state(:,3),state(:,4))
+xlabel('xh [m]');
+ylabel('xhdot [m/s]');
+title('phase diagram of head during stance phase');
 
 %% Energy plot
 figure
-plot(t(2:end),Ekin_stance-Wgravity-Wneck)
+subplot(121);plot(t(2:end),Ekin_stance-Wgravity-Wneck)
 xlabel('Time [s]');
 ylabel('delta Ekin - Wtot [J]');
-title('Energy balance of stance phase for headbobbing bird'); 
+title('Energy balance of stance phase for headbobbing bird');
+subplot(122);plot(t(2:end),Wneck)
+xlabel('Time [s]');
+ylabel('Wneck [J]');
+title('Active work done by neck'); 
+
 %% animation
 if 0
 figure;
