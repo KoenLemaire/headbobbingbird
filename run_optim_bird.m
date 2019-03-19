@@ -1,6 +1,3 @@
-% We are going to do a simulation of the stance phase of a pigeon walking
-% with a head on top. For now the head is stationary and we just do
-% simulation of the stance phase. 
 clear
 clc
 close all
@@ -8,7 +5,7 @@ close all
 %% Set parameters
 parms.g=-9.81; % [m/s^2] gravitational acceleration
 pigeon_mass=1; % [kg] total pigeon mass 
-head_mass_rel=.000001; % [] proportion of head mass relative to total pigeon mass
+head_mass_rel=.1; % [] proportion of head mass relative to total pigeon mass
 hh_rel=1.05; % head height relative to leg length
 bobtime_rel=.20; % [] relative time duration of headmotion  
 parms.L=1; % [m] leg length
@@ -29,20 +26,38 @@ parms.bobtime=parms.step_time*bobtime_rel; % [s]
 parms.delay=delay_rel*parms.step_time; % [s]
 %% free parameters
 % potentially add simulation time ?? 
-Phat_push=1; % [Ns] push off magnitude
-phid0=-1; % [rad/s] phidot of stance leg AT END OF PREVIOUS STANCE PHASE
+Phat_push=0; % [Ns] push off magnitude
+phid0=0; % [rad/s] phidot of stance leg AT END OF PREVIOUS STANCE PHASE
 step_time=parms.step_length/parms.speed;
-x0 = [phid0; Phat_push; step_time]; % initial guess for design parms
+%x0 = [phid0; Phat_push; step_time]; % initial guess for design parms
+x0 = [phid0; Phat_push]; % initial guess for design parms
 
-%% perform simulation:
-[Wcoll,c_coll,state_end,t,state,Ekin_stance,Wgravity,Wneck,Wpush] = bird_headbob_optim(x0, parms);
+%% test cost function
+%[Wcoll,c_coll,state_end,t,state,Ekin_stance,Wgravity,Wneck,Wpush] = bird_headbob_optim(x0, parms);
+%[t,state,phi_minus,phi_plus,phid_minus,phid_plus,Ekin_stance,Wgravity,Wneck,Wcoll,Wpush,Ekin_plus] = bird_headbob(x0, parms)
+%% run optimization
+if 1
+%fmincon_opt.FiniteDifferenceStepSize=1e-7;
+%fmincon_opt.StepTolerance=1e-6;
+%fmincon_opt.FiniteDifferenceType='central';
+fmincon_opt.Algorithm='active-set';
+%fmincon_opt.Algorithm='interior-point';
+fmincon_opt.Display='iter';
 
+optimFun=@(x)headbob_cost(x,parms); % DOESNT WORK WITH LSQNONLIN!!!
+nonlinconFun=@(x)headbob_nonlincon(x,parms);
+[x,fval,flag] = fmincon(optimFun,x0,[],[],[],[],[],[],nonlinconFun,fmincon_opt)
+
+[C,Ceq] = headbob_nonlincon (x,parms)
+%[J] = headbob_cost (x,parms)
+[Wcoll,c_coll,state_end,t,state,Ekin_stance,Wgravity,Wneck,Wpush] = bird_headbob_optim(x, parms);
+end
+%% State plots; not really a test, but demonstration plot
 phi=state(:,1);
 phid=state(:,2);
 xh=state(:,3);
 yh=parms.hh;
 
-%% State plots; not really a test, but demonstration plot
 figure;
 plot(t,state(:,1:2))
 xlabel('Time [s]');
@@ -56,7 +71,15 @@ xlabel('phi [rad]');
 ylabel('phidot [rad/s]');
 title('phase diagram of stance phase');
 legend('phi','phidot')
+
+%% Energy plot
+figure
+plot(t(2:end),Ekin_stance-Wgravity-Wneck)
+xlabel('Time [s]');
+ylabel('delta Ekin - Wtot [J]');
+title('Energy balance of stance phase for headbobbing bird'); 
 %% animation
+if 0
 figure;
 for iStep=1:length(t)
     r_p=parms.L*[cos(phi(iStep)) sin(phi(iStep))];
@@ -68,13 +91,8 @@ for iStep=1:length(t)
     ylabel('y axis [m]')
     legend('leg','head','pelvis','neck')
     title('stick diagram of stance leg and head')
-    axis([-1 1 0 1.5]*parms.L)
+    axis([-1.2 1.2 -1.2 1.2]*parms.L)
     drawnow
     axis equal
 end
-%% Energy plot
-figure
-plot(t,Ekin_stance-Wgravity-Wneck)
-xlabel('Time [s]');
-ylabel('delta Ekin - Wtot [J]');
-title('Energy balance of stance phase for headbobbing bird'); 
+end
